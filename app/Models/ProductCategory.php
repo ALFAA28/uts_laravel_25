@@ -11,10 +11,10 @@ class ProductCategory extends Model
     use HasFactory;
 
     /**
-     * The attributes that are mass assignable.
+     * 
      * Atribut yang dapat diisi secara massal (mass assignable).
      *
-     * @var array<int, string>
+     * @var array<int, 
      */
     protected $fillable = [
         'nama',

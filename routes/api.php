@@ -8,13 +8,15 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::prefix('v1')->group(function () {
-
+    // Rute Kategori Produk (CRUD)
     Route::apiResource('product-categories', ProductCategoryController::class);
+
     // Endpoint relasi: GET /api/product-categories/{id}/products
     Route::get('product-categories/{id}/products', [ProductCategoryController::class, 'getProductsByCategoryId']);
     
     // Rute Produk (CRUD dan Relasi)
     Route::apiResource('products', ProductController::class);
+
     // Endpoint relasi: GET /api/products/{id}/variants
     Route::get('products/{id}/variants', [ProductController::class, 'getVariantsByProductId']);
     

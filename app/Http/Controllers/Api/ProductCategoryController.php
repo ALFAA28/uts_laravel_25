@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 class ProductCategoryController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * 
      * Mengambil daftar semua kategori produk.
      *
      * @return \Illuminate\Http\JsonResponse
@@ -30,7 +30,7 @@ class ProductCategoryController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * 
      * Menyimpan kategori produk baru.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -52,7 +52,7 @@ class ProductCategoryController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * 
      * Menampilkan kategori produk tertentu berdasarkan ID.
      *
      * @param  int  $id
@@ -103,7 +103,7 @@ class ProductCategoryController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * 
      * Memperbarui kategori produk tertentu.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -135,7 +135,7 @@ class ProductCategoryController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * 
      * Menghapus kategori produk tertentu.
      *
      * @param  int  $id

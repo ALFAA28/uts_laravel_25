@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Exception; // Import kelas Exception umum
 
 class ProductVariantController extends Controller
 {
@@ -16,14 +17,19 @@ class ProductVariantController extends Controller
      */
     public function index()
     {
-        $productVariants = ProductVariant::all();
+        try {
+            $productVariants = ProductVariant::all();
 
-        // Cek jika koleksi kosong. Jika tidak ada data, kembalikan 404.
-        if ($productVariants->isEmpty()) {
-            return response()->json(['message' => 'Data varian produk tidak ditemukan'], 404);
+            // Cek jika koleksi kosong. Jika tidak ada data, kembalikan 404.
+            if ($productVariants->isEmpty()) {
+                return response()->json(['message' => 'Data varian produk tidak ditemukan'], 404);
+            }
+
+            return response()->json($productVariants);
+        } catch (Exception $e) {
+            // Menangkap Exception umum untuk masalah database atau server
+            return response()->json(['message' => 'Gagal mengambil data varian produk', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json($productVariants);
     }
 
     /**
@@ -34,17 +40,26 @@ class ProductVariantController extends Controller
      */
     public function store(Request $request)
     {
-        // Keterhubungan: Memastikan product_id ada di tabel products
-        $validatedData = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'nama' => 'required|max:255', // Contoh: Warna Merah, Ukuran L
-            'stok' => 'required|integer|min:0',
-            'tambahan_harga' => 'nullable|numeric|min:0',
-        ]);
-        
-        $productVariant = ProductVariant::create($validatedData);
+        try {
+            // Keterhubungan: Memastikan product_id ada di tabel products
+            $validatedData = $request->validate([
+                'product_id' => 'required|exists:products,id',
+                'nama' => 'required|max:255', // Contoh: Warna Merah, Ukuran L
+                'stok' => 'required|integer|min:0',
+                'tambahan_harga' => 'nullable|numeric|min:0',
+            ]);
+            
+            $productVariant = ProductVariant::create($validatedData);
 
-        return response()->json($productVariant, 201);
+            return response()->json($productVariant, 201);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Menangani ValidationException
+            return response()->json(['message' => 'Data yang dimasukkan tidak valid', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            // Menangkap Exception umum untuk kegagalan penyimpanan database
+            return response()->json(['message' => 'Gagal menyimpan varian produk baru', 'error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -64,6 +79,9 @@ class ProductVariantController extends Controller
         } catch (ModelNotFoundException $e) {
             // Menangkap ModelNotFoundException dan mengembalikan respons 404 kustom
             return response()->json(['message' => 'Data varian produk tidak ditemukan'], 404);
+        } catch (Exception $e) {
+            // Menangkap Exception umum
+            return response()->json(['message' => 'Gagal mengambil detail varian produk', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -95,6 +113,12 @@ class ProductVariantController extends Controller
         } catch (ModelNotFoundException $e) {
             // Menangkap ModelNotFoundException dan mengembalikan respons 404 kustom
             return response()->json(['message' => 'Data varian produk tidak ditemukan'], 404);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Menangani ValidationException
+            return response()->json(['message' => 'Data yang dimasukkan tidak valid', 'errors' => $e->errors()], 422);
+        } catch (Exception $e) {
+            // Menangkap Exception umum
+            return response()->json(['message' => 'Gagal memperbarui varian produk', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -108,15 +132,18 @@ class ProductVariantController extends Controller
     {
         try {
             // Menggunakan findOrFail untuk memastikan varian produk ada
-            $productVariants = ProductVariant::findOrFail($id);
+            $productVariant = ProductVariant::findOrFail($id);
 
-            $productVariants->delete();
+            $productVariant->delete();
 
             return response()->json(['message' => 'Varian produk berhasil dihapus']);
 
         } catch (ModelNotFoundException $e) {
             // Menangkap ModelNotFoundException dan mengembalikan respons 404 kustom
             return response()->json(['message' => 'Data varian produk tidak ditemukan'], 404);
+        } catch (Exception $e) {
+            // Menangkap Exception umum
+            return response()->json(['message' => 'Gagal menghapus varian produk', 'error' => $e->getMessage()], 500);
         }
     }
 }

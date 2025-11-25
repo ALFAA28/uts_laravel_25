@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Exception; // Import kelas Exception umum
 
 class ProductController extends Controller
 {
@@ -16,14 +17,22 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::all();
+        try {
+            $products = Product::all();
 
-        // Cek jika koleksi kosong. Jika tidak ada data, kembalikan 404.
-        if ($products->isEmpty()) {
-            return response()->json(['message' => 'Data produk tidak ditemukan'], 404);
+            // Cek jika koleksi kosong. Jika tidak ada data, kembalikan 404.
+            if ($products->isEmpty()) {
+                // Mengembalikan 404 jika tidak ada data
+                return response()->json(['message' => 'Data produk tidak ditemukan'], 404);
+            }
+
+            // Mengembalikan 200 OK
+            return response()->json($products);
+            
+        } catch (Exception $e) {
+            // Menangkap Exception umum untuk masalah database atau server lainnya
+            return response()->json(['message' => 'Gagal mengambil data produk', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json($products);
     }
 
     /**
@@ -34,55 +43,60 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        // Keterhubungan dihidupkan kembali: Memastikan product_category_id ada
-        $validatedData = $request->validate([
-            'nama' => 'required|max:255',
-            'product_category_id' => 'required|exists:product_categories,id', // Diaktifkan kembali
-            'harga' => 'required|numeric|min:0',
-            'deskripsi' => 'nullable',
-        ]);
-        
-        $product = Product::create($validatedData);
+        // Catatan: ValidationException yang dilempar oleh validate() secara default akan ditangani secara global oleh Laravel
+        // dan mengembalikan respons JSON 422 (Unprocessable Entity).
 
-        return response()->json($product, 201);
+        try {
+            $validatedData = $request->validate([
+                'nama' => 'required|max:255',
+                // 'exists' memastikan ID kategori ada di tabel product_categories
+                'product_category_id' => 'required|exists:product_categories,id',
+                'harga' => 'required|numeric|min:0',
+                'deskripsi' => 'nullable',
+            ]);
+            
+            $product = Product::create($validatedData);
+
+            // Mengembalikan 201 Created
+            return response()->json($product, 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Ini akan jarang tertangkap jika ValidationException ditangani secara global,
+            // tetapi baik untuk pengetahuan.
+            return response()->json(['message' => 'Data yang dimasukkan tidak valid', 'errors' => $e->errors()], 422);
+
+        } catch (Exception $e) {
+            // Menangkap Exception umum untuk masalah database saat menyimpan
+            return response()->json(['message' => 'Gagal menyimpan produk baru', 'error' => $e->getMessage()], 500);
+        }
     }
 
     /**
-     * Menampilkan produk tertentu.
+     * Menampilkan produk tertentu. (Sudah memiliki penanganan error yang baik)
      *
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
-     *
+     */
     public function show($id)
     {
         try {
-            // Menggunakan findOrFail yang akan melempar ModelNotFoundException jika ID tidak ditemukan
-            $product = Product::findOrFail($id);
+            // PENTING: Menggunakan with() untuk memuat relasi 'category' dan 'variants' (Eager Loading)
+            $product = Product::with(['category', 'variants'])->find($id);
 
-            return response()->json($product);
+            if (!$product) {
+                return response()->json(['message' => 'Produk tidak ditemukan'], 404);
+            }
 
-        } catch (ModelNotFoundException $e) {
-            // Menangkap ModelNotFoundException dan mengembalikan respons 404 kustom
-            return response()->json(['message' => 'Data produk tidak ditemukan'], 404);
+            return response()->json($product, 200);
+            
+        } catch (Exception $e) {
+            // Penanganan jika ada kesalahan lain saat memuat relasi
+            return response()->json(['message' => 'Gagal mengambil detail produk', 'error' => $e->getMessage()], 500);
         }
-    }
-    */
-
-public function show($id)
-{
-    {
-        // PENTING: Menggunakan with() untuk memuat relasi 'category' dan 'variants'
-        $product = Product::with(['category', 'variants'])->find($id);
-
-        if (!$product) {
-            return response()->json(['message' => 'Produk tidak ditemukan'], 404);
-        }
-
-        return response()->json($product, 200);
-    }
-}        
+    }        
+    
     /**
-     * Mengambil semua varian dari produk tertentu (Metode untuk Keterhubungan).
+     * Mengambil semua varian dari produk tertentu (Metode untuk Keterhubungan). (Sudah memiliki penanganan error yang baik)
      *
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
@@ -95,6 +109,8 @@ public function show($id)
             
             // Periksa apakah ada varian di produk ini
             if ($product->variants->isEmpty()) {
+                // 200 OK dengan pesan informatif jika tidak ada varian, atau 404 jika ini dianggap sumber daya yang hilang
+                // Saya mempertahankan 404 agar sesuai dengan logika awal, meskipun 200 juga bisa diterima.
                 return response()->json(['message' => 'Tidak ada varian yang ditemukan untuk produk ini'], 404);
             }
 
@@ -106,6 +122,8 @@ public function show($id)
 
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Data produk tidak ditemukan'], 404);
+        } catch (Exception $e) {
+             return response()->json(['message' => 'Gagal mengambil varian produk', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -119,29 +137,39 @@ public function show($id)
     public function update(Request $request, $id)
     {
         try {
-            // Menggunakan findOrFail untuk memastikan produk ada
+            // 1. Menggunakan findOrFail untuk memastikan produk ada, jika tidak ada akan melempar ModelNotFoundException
             $product = Product::findOrFail($id);
 
-            // Validasi dihidupkan kembali: Memastikan product_category_id masih valid
+            // 2. Validasi data input
             $validatedData = $request->validate([
                 'nama' => 'required|max:255',
-                'product_category_id' => 'required|exists:product_categories,id', // Diaktifkan kembali
+                'product_category_id' => 'required|exists:product_categories,id',
                 'harga' => 'required|numeric|min:0',
                 'deskripsi' => 'nullable',
             ]);
 
+            // 3. Memperbarui produk
             $product->update($validatedData);
 
+            // Mengembalikan 200 OK dengan data produk yang diperbarui
             return response()->json($product);
 
         } catch (ModelNotFoundException $e) {
             // Menangkap ModelNotFoundException dan mengembalikan respons 404 kustom
             return response()->json(['message' => 'Data produk tidak ditemukan'], 404);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Ini akan jarang tertangkap jika ValidationException ditangani secara global.
+            return response()->json(['message' => 'Data yang dimasukkan tidak valid', 'errors' => $e->errors()], 422);
+
+        } catch (Exception $e) {
+            // Menangkap Exception umum untuk masalah database saat update
+            return response()->json(['message' => 'Gagal memperbarui produk', 'error' => $e->getMessage()], 500);
         }
     }
 
     /**
-     * Menghapus produk tertentu.
+     * Menghapus produk tertentu. (Sudah memiliki penanganan error yang baik)
      *
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
@@ -154,11 +182,15 @@ public function show($id)
 
             $product->delete();
 
+            // Mengembalikan 200 OK (atau 204 No Content, tetapi 200 dengan pesan lebih informatif)
             return response()->json(['message' => 'Produk berhasil dihapus']);
 
         } catch (ModelNotFoundException $e) {
             // Menangkap ModelNotFoundException dan mengembalikan respons 404 kustom
             return response()->json(['message' => 'Data produk tidak ditemukan'], 404);
+        } catch (Exception $e) {
+            // Menangkap Exception umum untuk masalah database saat delete
+            return response()->json(['message' => 'Gagal menghapus produk', 'error' => $e->getMessage()], 500);
         }
     }
 

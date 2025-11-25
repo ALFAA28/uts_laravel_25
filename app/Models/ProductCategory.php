@@ -17,6 +17,7 @@ class ProductCategory extends Model
      * @var array<int, 
      */
     protected $fillable = [
+        'product_id',
         'nama',
         'deskripsi',
     ];
@@ -27,8 +28,22 @@ class ProductCategory extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function products(): HasMany
+    public function product(): HasMany
     {
         return $this->hasMany(Product::class, 'product_category_id');
     }
+
+    
+    /**
+     * Mendefinisikan relasi HasMany ke ProductVariant.
+     * Satu Product memiliki banyak ProductVariants.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function variant(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class, 'product_id');
+    }
+
+    
 }

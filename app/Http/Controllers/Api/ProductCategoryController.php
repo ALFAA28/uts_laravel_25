@@ -74,7 +74,7 @@ class ProductCategoryController extends Controller
     {
         try {
             // Menggunakan findOrFail yang akan melempar ModelNotFoundException jika ID tidak ditemukan
-            $productCategory = ProductCategory::findOrFail($id);
+            $productCategory = ProductCategory::with('product.variant')->findOrFail($id);
 
             // Mengembalikan data kategori produk
             return response()->json($productCategory);
@@ -98,7 +98,7 @@ class ProductCategoryController extends Controller
     {
         try {
             // Memuat kategori dan produk terkait. Asumsi: Model ProductCategory punya relasi 'products'.
-            $productCategory = ProductCategory::with('products')->findOrFail($id);
+            $productCategory = ProductCategory::findOrFail($id);
             
             // Periksa apakah ada produk di kategori ini
             if ($productCategory->products->isEmpty()) {

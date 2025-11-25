@@ -81,7 +81,7 @@ class ProductController extends Controller
     {
         try {
             // PENTING: Menggunakan with() untuk memuat relasi 'category' dan 'variants' (Eager Loading)
-            $product = Product::with(['category', 'variants'])->find($id);
+            $product = Product::with(['category', 'variant'])->find($id);
 
             if (!$product) {
                 return response()->json(['message' => 'Produk tidak ditemukan'], 404);

@@ -16,6 +16,7 @@ class ProductVariant extends Model
      * @var array<int, 
      */
     protected $fillable = [
+        'product_category_id',
         'product_id',
         'nama',
         'stok',
@@ -31,5 +32,16 @@ class ProductVariant extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id');
+    }
+
+        /**
+     * Mendefinisikan relasi BelongsTo ke ProductCategory.
+     * Satu Product dimiliki oleh satu ProductCategory.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ProductCategory::class, 'product_category_id');
     }
 }

@@ -72,7 +72,7 @@ class ProductVariantController extends Controller
     {
         try {
             // Menggunakan findOrFail yang akan melempar ModelNotFoundException jika ID tidak ditemukan
-            $productVariant = ProductVariant::findOrFail($id);
+            $productVariant = ProductVariant::with('product')->findOrFail($id);
 
             return response()->json($productVariant);
 
